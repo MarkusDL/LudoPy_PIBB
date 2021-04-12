@@ -3,10 +3,13 @@ import numpy as np
 
 def run(agent,get_state , reward_func, get_move_from_action, n=10, self_play = False):
     g = ludopy.Game()
-    R = 0
+    Rcumu = 0
+    wins = 0
 
     for i in range(n):
         there_is_a_winner1 = False
+        moves = 0
+        R = 0
         while not there_is_a_winner1:
             (dice0, move_pieces0, player_pieces0, enemy_pieces0, player_is_a_winner0, there_is_a_winner0), player_i = g.get_observation()
             # create state from observation
@@ -34,9 +37,16 @@ def run(agent,get_state , reward_func, get_move_from_action, n=10, self_play = F
 
             dice1, move_pieces1, player_pieces1, enemy_pieces1, player_is_a_winner1, there_is_a_winner1 = g.answer_observation(piece_to_move)
 
+            if player_i == 1 and player_is_a_winner1:
+                wins +=1
+
+
             if player_i == 1:
+                moves += 1
                 R += reward_func( player_pieces0, enemy_pieces0, player_is_a_winner0, there_is_a_winner0, player_pieces1, enemy_pieces1, player_is_a_winner1, there_is_a_winner1)
 
+        #print("game ", i, " the agent used  ", moves, " moves and got reward ", R)
+        Rcumu += R
         g.reset()
 
-    return R/n
+    return Rcumu/n, wins/n

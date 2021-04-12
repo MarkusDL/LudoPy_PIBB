@@ -6,7 +6,7 @@ class PIBB:
 
     def __init__(self, agent):
         self.rollouts            = 8         # number of games pr network
-        self.variance            = 0.015     # variance for parameters
+        self.variance            = 0.15     # variance for parameters
         self.init_var_boost      = 2         # gain on variance in first iteration
         self.itteration          = 0         # number of itterations
         self.workers             = 4         # cores
@@ -15,13 +15,15 @@ class PIBB:
         self.best_max_fitness    = -10000
         self.best_avg_fitness    = -10000
         self.best_min_fitness    = -10000
-        self.max_iterations      = 100
-        self.lr              = 0.01
+        self.max_iterations      = 1000
+        self.lr              = 0.1
 
         self.agent               = agent
         self.n_weights           = self.agent.get_n_weights()
 
-    def train(self, get_state, reward_func, get_move_from_action, runs_pr_rollout =10, self_play = False ):
+        self.win_rates = []
+
+    def train(self, get_state, reward_func, get_move_from_action, runs_pr_rollout =50, self_play = False ):
         # save weights from network
         wp = self.agent.get_weights()
 
@@ -41,16 +43,21 @@ class PIBB:
                 # execute policy with noisy weights
                 self.agent.set_weights(wp+epsilon)
 
-                rewards[rollout] = Environment.run(self.agent, get_state, reward_func, get_move_from_action, n=runs_pr_rollout, self_play=self_play)
+                rewards[rollout] , win_rate = Environment.run(self.agent, get_state, reward_func, get_move_from_action, n=runs_pr_rollout, self_play=self_play)
+
+                self.win_rates.append(win_rate)
+
+            print("win rate: ", sum(self.win_rates)/len(self.win_rates))
 
             # Calculate propapility
             S = np.zeros((self.rollouts), dtype=float)
             for k in range(self.rollouts):
                 # calculate Sk
                 Rk, Rmin, Rmax = rewards[k], np.min(rewards), np.max(rewards)
-                S[k] = math.exp( self.lr* ((Rk-Rmin)/(Rmax-Rmin)))
+                S[k] = np.exp( self.lr* ((Rk-Rmin)/(Rmax-Rmin)))
 
             P = S/np.sum(S)
 
-            delta_wp = epsilons * P[:, np.newaxis]
+            delta_wp = np.sum(epsilons * P[:, np.newaxis], axis=0)
             wp = wp + delta_wp
+            self.variance *= self.decay

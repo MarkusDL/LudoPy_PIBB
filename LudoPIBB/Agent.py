@@ -9,9 +9,9 @@ class NNet(nn.Module):
     def __init__(self,state_size, action_size ):
         super(NNet, self).__init__()
 
-        self.fc1 = nn.Linear(state_size, 20)
-        self.fc2 = nn.Linear(20, 20)
-        self.fc3 = nn.Linear(20, action_size)
+        self.fc1 = nn.Linear(state_size, 30)
+        self.fc2 = nn.Linear(30, 10)
+        self.fc3 = nn.Linear(10, action_size)
 
     def forward(self, x):
         x1 = F.relu(self.fc1(x))
