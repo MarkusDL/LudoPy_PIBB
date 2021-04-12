@@ -4,10 +4,6 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-torch = "*"
-numpy = "*"
-ludopy = "*"
-kinds = "*"
 
 [requires]
 python_version = "3.7"

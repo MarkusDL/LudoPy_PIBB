@@ -60,6 +60,7 @@ class Agent:
         return torch.argmax(self.nn(input))
 
     def get_n_weights(self):
+        print(len(self.params))
         return len(self.params)
 
 
