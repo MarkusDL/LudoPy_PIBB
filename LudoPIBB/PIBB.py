@@ -52,5 +52,5 @@ class PIBB:
 
             P = S/np.sum(S)
 
-            delta_wp = epsilons * P[:, np.newaxis]
+            delta_wp = np.sum(epsilons * P[:, np.newaxis], axis=0)
             wp = wp + delta_wp
