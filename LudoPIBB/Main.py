@@ -31,7 +31,7 @@ def reward_func( player_pieces0, enemy_pieces0, player_is_a_winner0, there_is_a_
 # create a instance of the class agent with a nn with input size state size and output size action size
 agent = Agent(state_size, action_size)
 
-# create a instance of the class PIBB with agent agent
+# create a instance of the class PIBB with agent
 learner = PIBB(agent)
 
 # train the learner (PIBB using agent) with state representation, reward function and move_function
