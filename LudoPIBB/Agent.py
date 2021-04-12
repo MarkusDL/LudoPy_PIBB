@@ -19,16 +19,6 @@ class NNet(nn.Module):
         x3 = self.fc3(x2)
         return x3
 
-    def set_weights(self, weights):
-        pass
-        '''
-            with torch.no_grad():
-            self.fc1.weight = torch.nn.Parameter(K)
-            self.fc2.weight = torch.nn.Parameter(K)
-            self.fc3.weight = torch.nn.Parameter(K)
-        '''
-
-
 
 class Agent:
     def __init__(self,state_size, action_size ):
