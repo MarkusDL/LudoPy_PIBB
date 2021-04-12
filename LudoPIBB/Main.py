@@ -14,7 +14,7 @@ def get_state(dice, move_pieces, player_pieces, enemy_pieces, player_is_a_winner
     return state
 
 
-# function that creates a move based on action based on what an action represent
+# function that creates a move based on what an action represent
 def get_move_from_action(action, move_pieces):
     # so far just random
     pice_to_move = move_pieces[np.random.randint(0, len(move_pieces))]
