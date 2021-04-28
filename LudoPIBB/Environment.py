@@ -1,9 +1,10 @@
 import ludopy
 import numpy as np
 
-def run(agent,get_state , reward_func, get_move_from_action, n=10, self_play = False):
+def run(agent,get_state , reward_func, get_move_from_action, n=10):
     g = ludopy.Game()
     R = 0
+    wins = 0
 
     for i in range(n):
         there_is_a_winner1 = False
@@ -14,13 +15,8 @@ def run(agent,get_state , reward_func, get_move_from_action, n=10, self_play = F
 
             # get action from agent
             if len(move_pieces0):
-                if self_play:
-                    # if self play all players are the same agent
-                    action = agent.get_action(state)
-                    piece_to_move = get_move_from_action(action,move_pieces0)
-                else:
                     # else only one of he players are a agent
-                    if player_i == 1:
+                    if player_i == 0:
                         #  get action from state for agent = player 1
                         action = agent.get_action(state)
                         piece_to_move = get_move_from_action(action, move_pieces0)
@@ -37,6 +33,9 @@ def run(agent,get_state , reward_func, get_move_from_action, n=10, self_play = F
             if player_i == 1:
                 R += reward_func( player_pieces0, enemy_pieces0, player_is_a_winner0, there_is_a_winner0, player_pieces1, enemy_pieces1, player_is_a_winner1, there_is_a_winner1)
 
+                if player_is_a_winner1:
+                    wins +=1
+
         g.reset()
 
-    return R/n
+    return R/n, wins/n

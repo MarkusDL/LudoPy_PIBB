@@ -1,6 +1,10 @@
 import Environment
 import numpy as np
 import math
+import time
+import multiprocessing
+import Agent
+import copy
 
 class PIBB:
 
@@ -10,47 +14,75 @@ class PIBB:
         self.init_var_boost      = 2         # gain on variance in first iteration
         self.itteration          = 0         # number of itterations
         self.workers             = 4         # cores
-        self.h                   = 10        # Exploration constant
+        self.h                   = 8        # Exploration constant
         self.decay               = 0.995     # Exploration decay constant
         self.best_max_fitness    = -10000
         self.best_avg_fitness    = -10000
         self.best_min_fitness    = -10000
-        self.max_iterations      = 100
-        self.lr              = 0.01
+        self.max_iterations      = 1000
+        self.lr                  = 0.5
 
         self.agent               = agent
         self.n_weights           = self.agent.get_n_weights()
 
-    def train(self, get_state, reward_func, get_move_from_action, runs_pr_rollout =10, self_play = False ):
+
+        self.outfile_path        = "Evolution_run"+str(time.time())+".txt"
+        f = open(self.outfile_path, "w+")
+        f.close()
+
+
+
+    def train(self, get_state, reward_func, get_move_from_action, runs_pr_rollout = 100):
         # save weights from network
         wp = self.agent.get_weights()
 
         for i in range(self.max_iterations):
             print("Iteration ", i)
             #create container for rewards and epsilon_noises
-            rewards     = np.zeros((self.rollouts), dtype=float)
-            epsilons    = np.zeros((self.rollouts, self.n_weights), dtype=float)
+            epsilons    = np.random.normal(0, self.variance, (self.rollouts, self.n_weights))
 
-            # preform rollouts and save Rewards and epsilon noises
+            args = []
+            for rollout in range(self.rollouts):
+                self.agent.set_weights(wp + epsilons[rollout])
+                args.append((copy.deepcopy(self.agent), get_state, reward_func, get_move_from_action, runs_pr_rollout))
+
+            with multiprocessing.Pool(processes=self.rollouts) as pool:
+                results = np.transpose(np.asarray(pool.starmap(Environment.run, args)))
+
+            rewards = results[0,:]
+            winrates = results[1,:]
+
+
+            '''
+            # preform rollouts and save Rewards
             for rollout in range(self.rollouts):
                 print("Rollout ", rollout)
-                # generate noise for weights
-                epsilon = np.random.normal(0, self.variance, self.n_weights)
-                epsilons[rollout] = epsilon
 
                 # execute policy with noisy weights
-                self.agent.set_weights(wp+epsilon)
+                self.agent.set_weights(wp+epsilons[rollout])
 
-                rewards[rollout] = Environment.run(self.agent, get_state, reward_func, get_move_from_action, n=runs_pr_rollout, self_play=self_play)
+                rewards[rollout] , winrates[rollout] = Environment.run(self.agent, get_state, reward_func, get_move_from_action, n=runs_pr_rollout)
+            '''
 
-            # Calculate propapility
-            S = np.zeros((self.rollouts), dtype=float)
-            for k in range(self.rollouts):
-                # calculate Sk
-                Rk, Rmin, Rmax = rewards[k], np.min(rewards), np.max(rewards)
-                S[k] = math.exp( self.lr* ((Rk-Rmin)/(Rmax-Rmin)))
+            print("Avg reward: ", np.average(rewards), "Rewards", rewards)
+            print("Avg winRate: ", np.average(winrates), "winRates", winrates)
+
+            with open(self.outfile_path, "a") as textfile:
+                for datapoint in rewards:
+                    textfile.write(str(datapoint)+",")
+                for datapoint in winrates:
+                    textfile.write(str(datapoint) + ",")
+                textfile.write("\n")
+
+            # Calculate probability
+            Rmin, Rmax = np.min(rewards), np.max(rewards)
+            S = np.exp( self.lr * ((rewards-Rmin)/(Rmax-Rmin)))
 
             P = S/np.sum(S)
 
+            # calculate change in weight
             delta_wp = np.sum(epsilons * P[:, np.newaxis], axis=0)
             wp = wp + delta_wp
+
+            # Decay variance for future iterations
+            self.variance *= self.decay

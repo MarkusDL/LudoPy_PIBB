@@ -9,14 +9,14 @@ class NNet(nn.Module):
     def __init__(self,state_size, action_size ):
         super(NNet, self).__init__()
 
-        self.fc1 = nn.Linear(state_size, 20)
-        self.fc2 = nn.Linear(20, 20)
+        self.fc1 = nn.Linear(state_size, 30)
+        self.fc2 = nn.Linear(30, 20)
         self.fc3 = nn.Linear(20, action_size)
 
     def forward(self, x):
-        x1 = F.relu(self.fc1(x))
-        x2 = F.relu(self.fc2(x1))
-        x3 = self.fc3(x2)
+        x1 = torch.sigmoid(self.fc1(x))
+        x2 = torch.sigmoid(self.fc2(x1))
+        x3 =  self.fc3(x2)
         return x3
 
 
@@ -39,6 +39,11 @@ class Agent:
         
         for  name, param in self.nn.named_parameters():
             # read weight or bias from layer
+
+            #skip bias
+            if name[4:] == "bias":
+                continue
+
             param = param.detach().numpy()
             
             #save shape 
@@ -56,8 +61,8 @@ class Agent:
 
     def get_action(self, state):
         #pass state through network
-        input = torch.from_numpy(state).float()
-        return torch.argmax(self.nn(input))
+        output = torch.from_numpy(state).float()
+        return self.nn(output).detach().numpy()
 
     def get_n_weights(self):
         print(len(self.params))
@@ -68,8 +73,16 @@ class Agent:
         with torch.no_grad():
             i = 1
             for name, param in self.nn.named_parameters():
+
+                #skip bias
+                if name[4:] == "bias":
+                    continue
+
                 # set param to the part of the list of total weights
                 param_weights = weights[sum(self.len_params[:i-1]):sum(self.len_params[:i])]
                 # reshape it to original shape after ravel and copy to the parameter
                 param.copy_(torch.from_numpy(np.resize(param_weights, self.shape_params[i-1])))
                 i += 1
+
+class temp_agent(Agent):
+    pass
