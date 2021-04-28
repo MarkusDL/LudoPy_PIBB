@@ -10,7 +10,7 @@ class PIBB:
 
     def __init__(self, agent):
         self.rollouts            = 8         # number of games pr network
-        self.variance            = 0.015     # variance for parameters
+        self.variance            = 0.0     # variance for parameters
         self.init_var_boost      = 2         # gain on variance in first iteration
         self.itteration          = 0         # number of itterations
         self.workers             = 4         # cores

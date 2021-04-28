@@ -9,15 +9,13 @@ class NNet(nn.Module):
     def __init__(self,state_size, action_size ):
         super(NNet, self).__init__()
 
-        self.fc1 = nn.Linear(state_size, 30)
-        self.fc2 = nn.Linear(30, 20)
-        self.fc3 = nn.Linear(20, action_size)
+        self.fc1 = nn.Linear(state_size, 6)
+        self.fc2 = nn.Linear(6, action_size)
 
     def forward(self, x):
         x1 = torch.sigmoid(self.fc1(x))
-        x2 = torch.sigmoid(self.fc2(x1))
-        x3 =  self.fc3(x2)
-        return x3
+        x2 =  self.fc2(x1)
+        return x2
 
 
 class Agent:
@@ -70,10 +68,10 @@ class Agent:
 
 
     def set_weights(self, weights):
+        global last_param_weght
         with torch.no_grad():
             i = 1
             for name, param in self.nn.named_parameters():
-
                 #skip bias
                 if name[4:] == "bias":
                     continue
@@ -81,6 +79,7 @@ class Agent:
                 # set param to the part of the list of total weights
                 param_weights = weights[sum(self.len_params[:i-1]):sum(self.len_params[:i])]
                 # reshape it to original shape after ravel and copy to the parameter
+
                 param.copy_(torch.from_numpy(np.resize(param_weights, self.shape_params[i-1])))
                 i += 1
 
