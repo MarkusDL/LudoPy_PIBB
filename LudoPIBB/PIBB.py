@@ -10,17 +10,17 @@ class PIBB:
 
     def __init__(self, agent):
         self.rollouts            = 8         # number of games pr network
-        self.variance            = 0.0     # variance for parameters
+        self.variance            = 5.0     # variance for parameters
         self.init_var_boost      = 2         # gain on variance in first iteration
         self.itteration          = 0         # number of itterations
         self.workers             = 4         # cores
         self.h                   = 8        # Exploration constant
-        self.decay               = 0.995     # Exploration decay constant
+        self.decay               = 0.990     # Exploration decay constant
         self.best_max_fitness    = -10000
         self.best_avg_fitness    = -10000
         self.best_min_fitness    = -10000
         self.max_iterations      = 1000
-        self.lr                  = 0.5
+        self.lr                  = 0.02
 
         self.agent               = agent
         self.n_weights           = self.agent.get_n_weights()
@@ -51,6 +51,8 @@ class PIBB:
 
             rewards = results[0,:]
             winrates = results[1,:]
+            fitness = results[2,:]
+            rewards = fitness
 
 
             '''

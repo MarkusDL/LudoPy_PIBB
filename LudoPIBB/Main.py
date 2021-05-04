@@ -1,59 +1,132 @@
 from Agent import Agent
 from PIBB import PIBB
 import numpy as np
+import ludopy
+import cv2
 
-state_size = 20
+state_size = 68
 action_size = 4
 
+star_fields = np.array([5, 12, 18, 25, 31, 38, 44, 51])
+globe_fields = np.array([1,9, 14, 22,27,40,48,51])
+enemy_starts = np.array([14, 27, 48])
 
 # function for creating a state representation from observation of enviroment
 def get_state(dice, move_pieces, player_pieces, enemy_pieces, player_is_a_winner, there_is_a_winner):
 
-    enemy_pieces_relative =np.multiply(np.asarray([enemy_pieces[i]+13*(i+1) for i in range(len(enemy_pieces)) ]), np.asarray(enemy_pieces, dtype = bool) )
+    enemy_pieces_relative =np.multiply(np.asarray([enemy_pieces[i]+13*(i+1) for i in range(len(enemy_pieces)) ]), np.asarray(enemy_pieces, dtype = bool) )%56
     future_player_pieces = np.asarray(player_pieces)+dice
+
+
+    isInSafeZone = np.asarray(player_pieces >=53,dtype=float)
+    isOnEnemyStart = [space in enemy_starts for space in player_pieces]
+    isOnGlobe = [space in globe_fields for space in player_pieces]
+    isOnStar = [space in star_fields for space in player_pieces]
+
+    state = np.hstack([isInSafeZone, isOnEnemyStart, isOnStar, isOnGlobe])
 
     #can be moved
     can_be_moved = np.zeros(4)
     for index in move_pieces:
         can_be_moved[index]=1
+    state = np.hstack([state,can_be_moved])
+
+    #can reach star
+    can_reach_star = np.zeros(4)
+    for i in range(len(player_pieces)):
+        if can_be_moved[i] == 1 and future_player_pieces[i] in star_fields:
+            can_reach_star[i] = 1
+    state = np.hstack([state,can_reach_star])
+
+    #can reach globe
+    can_reach_globe = np.zeros(4)
+    for i in range(len(player_pieces)):
+        if can_be_moved[i] == 1 and future_player_pieces[i] in globe_fields:
+            can_reach_globe[i] = 1
+    state = np.hstack([state, can_reach_globe])
+
+    # can reach safety
+    can_reach_saftyZone = np.zeros(4)
+    for i in range(len(player_pieces)):
+        if can_be_moved[i] == 1 and future_player_pieces[i] >= 53:
+            can_reach_saftyZone[i] = 1
+    state = np.hstack([state, can_reach_saftyZone])
+
+    #can reach home
+    can_reach_home = np.zeros(4)
+    for i in range(len(player_pieces)):
+        if can_be_moved[i] == 1 and can_reach_home[i] == 59:
+            can_reach_home[i] = 1
+    state = np.hstack([state, can_reach_home])
 
     #can send enemy home
     can_send_enemy_home = np.zeros(4)
     for i in range(len(player_pieces)):
-        if np.any(enemy_pieces_relative == future_player_pieces[i]):
+        if can_be_moved[i] == 1 and np.any(enemy_pieces_relative == future_player_pieces[i]):
             can_send_enemy_home[i] = 1
+    state = np.hstack([state, can_send_enemy_home])
 
-    #is in danger
-    is_in_danger = np.zeros(4)
+    #can die from move
+    can_die_from_move = np.zeros(4)
     for i in range(len(player_pieces)):
-        if np.any(np.abs(enemy_pieces_relative-player_pieces[i]) < 7):
-            is_in_danger[i] = 1
+        if can_be_moved[i] == 1 and np.count_nonzero(enemy_pieces_relative == future_player_pieces[i] ):
+            can_die_from_move[i] = 1
+    state = np.hstack([state, can_die_from_move])
 
-    #will be in danger
-    will_be_in_danger = np.zeros(4)
+    #can get out of home
+    can_get_out_of_home = np.zeros(4)
     for i in range(len(player_pieces)):
-        if np.any(np.abs(enemy_pieces_relative - future_player_pieces[i]) < 7):
-            will_be_in_danger[i] = 1
+        if can_be_moved[i] == 1 and player_pieces[i] == 0:
+            can_get_out_of_home[i] = 1
+    state = np.hstack([state, can_get_out_of_home])
 
-    #can reach safty
-    can_reach_safty = np.zeros(4)
+    #can block enemy start
+    can_block_enemy_start = np.zeros(4)
     for i in range(len(player_pieces)):
-        if future_player_pieces[i] < 53 and not player_pieces[i] > 53 :
-            can_reach_safty[i] = 1
+        if can_be_moved[i] == 1 and future_player_pieces[i] in enemy_starts:
+            can_block_enemy_start[i] = 1
+    state = np.hstack([state, can_block_enemy_start])
 
-    # just a placeholder to test if the code will run
-    state = np.hstack([can_be_moved, can_send_enemy_home, is_in_danger, will_be_in_danger, can_reach_safty])
+    #is on threatened square
+    is_on_threatened_square = np.zeros(4)
+    for i in range(len(player_pieces)):
+        distance_to_enemy = enemy_pieces_relative - player_pieces[i]
+        if np.count_nonzero((distance_to_enemy < 0 ) & (distance_to_enemy > -7)):
+            is_on_threatened_square[i] = 1
+    state = np.hstack([state, is_on_threatened_square])
+
+    # will reach threatened square
+    will_reach_threatened_square = np.zeros(4)
+    for i in range(len(player_pieces)):
+        distance_to_enemy = enemy_pieces_relative - future_player_pieces[i]
+        if np.count_nonzero((distance_to_enemy < 0 ) & (distance_to_enemy > -7)):
+            will_reach_threatened_square[i] = 1
+    state = np.hstack([state, will_reach_threatened_square])
+
+    # Is threatening enemy square
+    is_threatening_enemy_square = np.zeros(4)
+    for i in range(len(player_pieces)):
+        distance_to_enemy = enemy_pieces_relative - player_pieces[i]
+        if np.count_nonzero((distance_to_enemy > 0) & (distance_to_enemy < 7)):
+            is_threatening_enemy_square[i] = 1
+    state = np.hstack([state, is_threatening_enemy_square])
+
+    # can threaten enemy square
+    can_threaten_enemy_square = np.zeros(4)
+    for i in range(len(player_pieces)):
+        distance_to_enemy = enemy_pieces_relative - future_player_pieces[i]
+        if np.count_nonzero((distance_to_enemy > 0) & (distance_to_enemy < 7)):
+            can_threaten_enemy_square[i] = 1
+    state = np.hstack([state, can_threaten_enemy_square])
+
 
     return state
 
 # function that creates a move based on what an action represent
-counter = 0
+
 def get_move_from_action(action, move_pieces):
-    global counter
     #sort action value indexes descending order
     ordered_pice_index = [i[0] for i in sorted(enumerate(action), key=lambda k: k[1], reverse=True)]
-
-    counter +=1
     #choose highest vales action that is able to be taken
     for pice_index in ordered_pice_index:
         if pice_index in move_pieces:
@@ -63,11 +136,6 @@ def get_move_from_action(action, move_pieces):
         pice_to_move = -1
         print("invalid move taken")
 
-    if counter % 100 == None:
-        print(action)
-        print(ordered_pice_index)
-        print(pice_to_move)
-
     return pice_to_move
 
 
@@ -75,14 +143,7 @@ def get_move_from_action(action, move_pieces):
 def reward_func( player_pieces0, enemy_pieces0, player_is_a_winner0, there_is_a_winner0, player_pieces1, enemy_pieces1, player_is_a_winner1, there_is_a_winner1):
     reward = 0
     if player_is_a_winner1:
-        reward += 10
-
-    #add reward for moving pices forward and penalty for moving back home
-    reward += np.average(player_pieces1-player_pieces0)*0.01
-
-    #add reward for sending enemies home
-    reward += np.average(np.ravel(enemy_pieces0) - np.ravel(enemy_pieces1))*0.1
-
+        reward += 1
 
     return reward
 
@@ -95,4 +156,6 @@ if __name__ == '__main__':
 
     # train the learner (PIBB using agent) with state representation, reward function and move_function
     learner.train(get_state, reward_func, get_move_from_action)
+
+
 

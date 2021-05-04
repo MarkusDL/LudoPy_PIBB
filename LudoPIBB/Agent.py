@@ -14,7 +14,7 @@ class NNet(nn.Module):
 
     def forward(self, x):
         x1 = torch.sigmoid(self.fc1(x))
-        x2 =  self.fc2(x1)
+        x2 =  F.softmax(self.fc2(x1), dim=0)
         return x2
 
 

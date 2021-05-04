@@ -5,6 +5,8 @@ def run(agent,get_state , reward_func, get_move_from_action, n=10):
     g = ludopy.Game()
     R = 0
     wins = 0
+    dist_from_home = 0
+    enemy_dist_from_home = 0
 
     for i in range(n):
         there_is_a_winner1 = False
@@ -30,12 +32,16 @@ def run(agent,get_state , reward_func, get_move_from_action, n=10):
 
             dice1, move_pieces1, player_pieces1, enemy_pieces1, player_is_a_winner1, there_is_a_winner1 = g.answer_observation(piece_to_move)
 
-            if player_i == 1:
+            if player_i == 0:
                 R += reward_func( player_pieces0, enemy_pieces0, player_is_a_winner0, there_is_a_winner0, player_pieces1, enemy_pieces1, player_is_a_winner1, there_is_a_winner1)
 
                 if player_is_a_winner1:
                     wins +=1
 
+        dist_from_home += np.sum(np.abs(player_pieces1-59))
+        enemy_dist_from_home += np.sum(np.abs(enemy_pieces1-59))/4
+
         g.reset()
 
-    return R/n, wins/n
+    fitness = (wins+(dist_from_home-enemy_dist_from_home)/1000)/250*100
+    return R/n, wins/n, fitness
