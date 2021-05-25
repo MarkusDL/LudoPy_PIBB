@@ -8,33 +8,33 @@ import copy
 
 class PIBB:
 
-    def __init__(self, agent):
-        self.rollouts            = 8         # number of games pr network
-        self.variance            = 5.0     # variance for parameters
-        self.init_var_boost      = 2         # gain on variance in first iteration
+    def __init__(self,var=1.0,decay = 0.99, lr = 0.02,  rollouts = 8, max_it = 200, agent = None):
+        self.rollouts            = rollouts         # number of games pr network
+        self.variance            = var     # variance for parameters
         self.itteration          = 0         # number of itterations
         self.workers             = 4         # cores
-        self.h                   = 8        # Exploration constant
-        self.decay               = 0.990     # Exploration decay constant
+        self.decay               = decay     # Exploration decay constant
         self.best_max_fitness    = -10000
         self.best_avg_fitness    = -10000
         self.best_min_fitness    = -10000
-        self.max_iterations      = 1000
-        self.lr                  = 0.02
+        self.max_iterations      = max_it
+        self.lr                  = lr
 
         self.agent               = agent
         self.n_weights           = self.agent.get_n_weights()
 
 
-        self.outfile_path        = "Evolution_run"+str(time.time())+".txt"
+        self.outfile_path        = "it_"+str(max_it)+"_var_"+str(var)+"_d_"+str(decay)+"_lr_"+str(lr)+".txt"
         f = open(self.outfile_path, "w+")
         f.close()
 
 
 
-    def train(self, get_state, reward_func, get_move_from_action, runs_pr_rollout = 100):
+    def train(self, get_state, reward_func, get_move_from_action, runs_pr_rollout = 150):
         # save weights from network
         wp = self.agent.get_weights()
+
+        print("training: "+ self.outfile_path[:-4])
 
         for i in range(self.max_iterations):
             print("Iteration ", i)
